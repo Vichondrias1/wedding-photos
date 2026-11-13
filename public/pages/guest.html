@@ -38,11 +38,27 @@
   .item.done .bar > i { background: color-mix(in srgb, var(--primary) 55%, var(--bg)); }
   .item.error .status { color: var(--danger); }
   .retry { border: 0; background: none; color: var(--danger); font: 600 12px var(--body); text-decoration: underline; padding: 0; cursor: pointer; }
+  /* Finished uploads land on a little pile of prints. */
+  .pile { position: relative; height: 150px; margin: 6px 0 4px; perspective: 700px; }
+  .print { position: absolute; left: 50%; top: 18px; width: 92px; height: 106px; margin-left: -46px; padding: 6px 6px 20px; background: #fff; border: 1px solid var(--line); box-shadow: 0 2px 6px color-mix(in srgb, var(--text) 12%, transparent); }
+  .print i { display: block; width: 100%; height: 100%; background: var(--soft) center/cover no-repeat; }
   .thanks { text-align: center; padding: 14px 0 4px; font-family: var(--display); font-style: italic; font-size: 26px; color: var(--primary); }
-  .countdown { display: grid; grid-template-columns: repeat(4, 1fr); margin: 22px auto 18px; max-width: 360px; }
-  .countdown div { padding: 4px 0 2px; overflow: hidden; }
-  .countdown div + div { border-left: 1px solid color-mix(in srgb, var(--accent) 60%, var(--bg)); }
-  .countdown b { display: block; font-family: var(--display); font-weight: 400; font-size: 46px; line-height: 1; color: var(--primary); font-variant-numeric: lining-nums tabular-nums; }
+  .countdown { display: flex; justify-content: center; gap: 10px; margin: 24px auto 18px; }
+  .countdown > div { display: flex; flex-direction: column; align-items: center; }
+  /* Flip-clock tile: two halves of a card, split by a hairline. */
+  .tile { position: relative; width: 62px; height: 70px; perspective: 320px; font-family: var(--display); font-size: 44px; color: var(--primary); font-variant-numeric: lining-nums tabular-nums; }
+  .tile.wide { width: 80px; }
+  .tile::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: color-mix(in srgb, var(--text) 10%, var(--bg)); z-index: 3; }
+  .half { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--card); border: 1px solid var(--line); }
+  .half span { position: absolute; left: 0; right: 0; height: 200%; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .half.top { top: 0; border-bottom: 0; border-radius: 3px 3px 0 0; }
+  .half.bot { bottom: 0; border-top: 0; border-radius: 0 0 3px 3px; background: color-mix(in srgb, var(--card) 92%, var(--text)); }
+  .half.top span { top: 0; }
+  .half.bot span { bottom: 0; }
+  .half.flip-out { z-index: 2; transform-origin: bottom; backface-visibility: hidden; animation: flipOut .3s ease-in forwards; }
+  .half.flip-in { z-index: 2; transform-origin: top; transform: rotateX(90deg); backface-visibility: hidden; animation: flipIn .3s .3s ease-out forwards; }
+  @keyframes flipOut { to { transform: rotateX(-90deg); } }
+  @keyframes flipIn { to { transform: rotateX(0deg); } }
   .countdown small { display: block; margin-top: 6px; font-family: var(--display); font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.18em; font-size: 15px; color: var(--muted); }
   .burst { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
 
@@ -53,7 +69,6 @@
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   @keyframes sheen { from { background-position: 150% 0; } to { background-position: -50% 0; } }
-  @keyframes tick { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: no-preference) {
     .motion .hero img.logo { opacity: 0; }
     .motion .hero img.logo.go {
@@ -75,7 +90,6 @@
     }
     .item { animation: rise .35s ease-out both; }
     .thanks:not([hidden]) { animation: rise .6s ease-out both; }
-    .countdown b.tick { animation: tick .4s ease-out; }
   }
   .admin-note { text-align: center; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); padding: 8px 12px; margin-top: 20px; }
 </style>
@@ -95,11 +109,11 @@
 
   <section class="card closed" id="closed" hidden>
     <h2 id="closedTitle"></h2>
-    <div class="countdown" id="countdown" hidden>
-      <div><b id="cdD">0</b><small>days</small></div>
-      <div><b id="cdH">00</b><small>hours</small></div>
-      <div><b id="cdM">00</b><small>min</small></div>
-      <div><b id="cdS">00</b><small>sec</small></div>
+    <div class="countdown" id="countdown" aria-hidden="true" hidden>
+      <div><div class="tile wide" id="cdD"></div><small>days</small></div>
+      <div><div class="tile" id="cdH"></div><small>hours</small></div>
+      <div><div class="tile" id="cdM"></div><small>min</small></div>
+      <div><div class="tile" id="cdS"></div><small>sec</small></div>
     </div>
     <p class="hint" id="closedHint"></p>
   </section>
@@ -118,6 +132,7 @@
       <button class="btn small ghost" id="retryAll" type="button" hidden>Retry failed</button>
     </div>
     <div class="bar"><i id="totalBar"></i></div>
+    <div class="pile" id="pile" aria-hidden="true" hidden></div>
     <div class="thanks" id="thanks" hidden>Got them. Thank you.</div>
     <ul class="list" id="list"></ul>
   </section>
@@ -200,6 +215,33 @@ function burst() {
   })(t0);
 }
 
+// Each finished upload drops onto the pile as a small print.
+let prints = 0;
+function addPrint(it) {
+  const pile = $("pile");
+  pile.hidden = false;
+  const card = document.createElement("div");
+  card.className = "print";
+  const img = document.createElement("i");
+  if (it.thumbUrl) img.style.backgroundImage = `url(${it.thumbUrl})`;
+  it.print = img;
+  card.append(img);
+  const n = prints++;
+  const rz = ((n * 37) % 25) - 12 + (Math.random() * 4 - 2);
+  const dx = ((n * 53) % 90) - 45;
+  const rest = `translate3d(${dx}px, 0, 0) rotateZ(${rz.toFixed(1)}deg)`;
+  card.style.transform = rest;
+  pile.append(card);
+  while (pile.children.length > 9) pile.firstChild.remove();
+  if (!calm) {
+    card.animate([
+      { transform: `translate3d(${dx}px, -160px, 240px) rotateX(55deg) rotateZ(${(rz * 3).toFixed(1)}deg)`, opacity: 0 },
+      { opacity: 1, offset: 0.3 },
+      { transform: rest },
+    ], { duration: 900, easing: "cubic-bezier(.2, .8, .3, 1)" });
+  }
+}
+
 // ---------- upload window ----------
 function fmtDate(iso, withTime) {
   const d = new Date(iso);
@@ -229,6 +271,27 @@ async function refreshStatus() {
   }
   return s;
 }
+// One flip-clock tile: the old top half folds down, revealing the new number.
+function half(cls, text) {
+  const d = document.createElement("div");
+  d.className = "half " + cls;
+  const sp = document.createElement("span");
+  sp.textContent = text;
+  d.append(sp);
+  return d;
+}
+function flipTo(tile, text) {
+  const old = tile.dataset.v;
+  if (old === text) return;
+  tile.dataset.v = text;
+  clearTimeout(tile._t);
+  if (old === undefined || calm || document.hidden) {
+    tile.replaceChildren(half("top", text), half("bot", text));
+    return;
+  }
+  tile.replaceChildren(half("top", text), half("bot", old), half("top flip-out", old), half("bot flip-in", text));
+  tile._t = setTimeout(() => tile.replaceChildren(half("top", text), half("bot", text)), 650);
+}
 let countdownTimer = 0;
 function startCountdown() {
   const target = Date.parse(W.uploadOpens);
@@ -238,14 +301,7 @@ function startCountdown() {
   const tick = () => {
     const left = Math.max(0, Math.floor((target - Date.now()) / 1000));
     const v = [Math.floor(left / 86400), Math.floor((left % 86400) / 3600), Math.floor((left % 3600) / 60), left % 60];
-    v.forEach((x, i) => {
-      const el = $(ids[i]);
-      const text = i ? String(x).padStart(2, "0") : String(x);
-      if (el.textContent !== text) {
-        el.textContent = text;
-        el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick");
-      }
-    });
+    v.forEach((x, i) => flipTo($(ids[i]), i ? String(x).padStart(2, "0") : String(x)));
     if (left === 0) {
       clearInterval(countdownTimer);
       setTimeout(refreshStatus, 1500);
@@ -299,7 +355,11 @@ function addItem(file, guest) {
   render();
   makeThumb(file).then((blob) => {
     it.thumb = blob;
-    if (blob) li.querySelector(".thumb").style.backgroundImage = `url(${URL.createObjectURL(blob)})`;
+    if (blob) {
+      it.thumbUrl = URL.createObjectURL(blob);
+      li.querySelector(".thumb").style.backgroundImage = `url(${it.thumbUrl})`;
+      if (it.print) it.print.style.backgroundImage = `url(${it.thumbUrl})`;
+    }
   });
 }
 
@@ -323,6 +383,7 @@ async function run(it) {
     it.sent = it.file.size;
     it.li.classList.add("done");
     setMsg(it, "Uploaded", "");
+    addPrint(it);
     await uploadThumb(it);
   } catch (err) {
     if (err.fatal) return fail(it, err.message, false);

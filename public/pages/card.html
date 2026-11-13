@@ -12,13 +12,19 @@
   body { background: color-mix(in srgb, var(--text) 8%, var(--bg)); }
   .controls { max-width: 560px; margin: 24px auto; padding: 0 16px; display: grid; gap: 12px; }
   .controls h1 { font-size: 32px; }
+  .controls h2 { font-size: 22px; margin-top: 8px; }
   .controls p { margin: 0; font-size: 14px; color: var(--muted); }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text); margin: 0; }
+  .check input { width: 18px; height: 18px; accent-color: var(--primary); }
+
   .card {
     width: 4in; height: 6in; margin: 0 auto 40px; background: var(--bg); color: var(--text);
     box-shadow: 0 6px 30px rgba(0,0,0,.12);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 0.38in 0.34in; position: relative;
+    text-align: center; padding: 0.38in 0.34in; position: relative; overflow: hidden;
   }
   .card::before { content: ""; position: absolute; inset: 0.16in; border: 1px solid var(--accent); opacity: .8; pointer-events: none; }
   .card::after { content: ""; position: absolute; inset: 0.21in; border: 0.5px solid var(--accent); opacity: .5; pointer-events: none; }
@@ -31,6 +37,22 @@
   .qr svg { width: 100%; height: 100%; display: block; }
   .steps { font-size: 8.5pt; color: var(--muted); line-height: 1.45; }
   .url { font-size: 8pt; margin-top: 6pt; color: var(--primary); word-break: break-all; }
+
+  /* Two codes: Wi-Fi + upload */
+  .pair { display: none; grid-template-columns: 1fr 1fr; gap: 0.16in; width: 100%; margin-top: 4pt; }
+  .card.two .single { display: none; }
+  .card.two .pair { display: grid; }
+  .card.two .names { font-size: 28pt; }
+  .card.two .rule { margin: 9pt auto; }
+  .card.two .headline { font-size: 15pt; margin-bottom: 8pt; }
+  .col { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+  .num { font-family: var(--display); font-size: 12.5pt; line-height: 1.15; margin-bottom: 5pt; }
+  .num b { display: inline-block; width: 16pt; height: 16pt; line-height: 16pt; border-radius: 50%; background: var(--primary); color: #fff; font: 600 8.5pt/16pt var(--body); margin-right: 4pt; vertical-align: 1pt; }
+  .col .qr { width: 1.34in; height: 1.34in; margin: 0 auto 5pt; padding: 0.06in; }
+  .small { font-size: 7.5pt; color: var(--muted); line-height: 1.35; word-break: break-word; }
+  .small strong { color: var(--text); font-weight: 600; }
+  .card.two .steps { margin-top: 9pt; }
+
   @media print {
     body { background: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .controls { display: none; }
@@ -41,48 +63,128 @@
 <body>
 <section class="controls">
   <h1>QR table card</h1>
-  <p>Prints at 4×6 inches. In the print dialog choose paper size <b>4×6 in</b> (or 10×15 cm), margins <b>None</b>, scale <b>100%</b>, and turn on <b>Background graphics</b>. Print a test page first and scan it with a couple of phones.</p>
-  <label for="url">Link in the QR code</label>
+  <p>Prints at 4×6 inches. In the print dialog choose paper size <b>4×6 in</b> (or 10×15 cm), margins <b>None</b>, scale <b>100%</b>, and turn on <b>Background graphics</b>. Print a test page first and scan both codes with an iPhone and an Android.</p>
+  <label for="url">Link in the photo QR code</label>
   <input type="url" id="url">
   <label for="headline">Headline</label>
   <input type="text" id="headline" value="Share your photos &amp; videos with us">
+
+  <h2>Venue Wi-Fi (optional)</h2>
+  <p>Adds a second code that joins the Wi-Fi in one tap, so big videos upload faster. Leave the network name empty for a single-code card. Nothing you type here is saved.</p>
+  <div class="grid2">
+    <div><label for="wifiName">Wi-Fi network name</label><input type="text" id="wifiName" autocomplete="off" spellcheck="false"></div>
+    <div><label for="wifiPass">Wi-Fi password</label><input type="text" id="wifiPass" autocomplete="off" spellcheck="false"></div>
+  </div>
+  <div class="grid2">
+    <div><label for="wifiSec">Security</label>
+      <select id="wifiSec">
+        <option value="WPA">WPA / WPA2 / WPA3 (most networks)</option>
+        <option value="WEP">WEP (old routers)</option>
+        <option value="nopass">No password (open network)</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:flex-end"><label class="check"><input type="checkbox" id="wifiShow" checked> Print network name &amp; password</label></div>
+  </div>
+
   <div class="row">
     <button class="btn" type="button" onclick="window.print()">Print</button>
     <a class="btn ghost" href="/admin">Back to admin</a>
   </div>
 </section>
 
-<article class="card">
+<article class="card" id="card">
   <div class="kicker">The wedding of</div>
   <div class="names" id="names"></div>
   <div class="date" id="date"></div>
   <div class="rule"></div>
   <div class="headline" id="headlineOut"></div>
-  <div class="qr" id="qr"></div>
-  <div class="steps">Open your camera · point it at the code · tap the link<br>No app or sign-up needed</div>
-  <div class="url" id="urlOut"></div>
+
+  <div class="single">
+    <div class="qr" id="qr"></div>
+    <div class="steps">Open your camera · point it at the code · tap the link<br>No app or sign-up needed</div>
+    <div class="url" id="urlOut"></div>
+  </div>
+
+  <div class="pair">
+    <div class="col">
+      <div class="num"><b>1</b>Join the Wi-Fi</div>
+      <div class="qr" id="qrWifi"></div>
+      <div class="small" id="wifiText"></div>
+    </div>
+    <div class="col">
+      <div class="num"><b>2</b>Share your photos</div>
+      <div class="qr" id="qr2"></div>
+      <div class="small" id="urlOut2"></div>
+    </div>
+  </div>
+  <div class="steps pair-steps" id="pairSteps" hidden>Open your camera, point it at each code and tap the link · no app needed</div>
 </article>
 
 <script type="module">
 import qrcode from "/vendor/qrcode.mjs";
+// Encode as UTF-8 so Wi-Fi names with accents or emoji work.
+qrcode.stringToBytes = (s) => Array.from(new TextEncoder().encode(s));
+
 const W = window.WEDDING;
 const $ = (id) => document.getElementById(id);
 if (W.font === "modern") document.documentElement.classList.add("font-modern");
 $("names").textContent = W.coupleNames;
 $("date").textContent = [W.weddingDate, W.venue].filter(Boolean).join(" · ");
 $("url").value = W.siteUrl || location.origin + "/";
+$("wifiName").value = W.wifiName || "";
+$("wifiPass").value = W.wifiPassword || "";
+$("wifiSec").value = ["WPA", "WEP", "nopass"].includes(W.wifiSecurity) ? W.wifiSecurity : "WPA";
+
+function svg(text) {
+  const qr = qrcode(0, "M");
+  qr.addData(text, "Byte");
+  qr.make();
+  return qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+}
+// Standard Wi-Fi QR format understood by iPhone (iOS 11+) and Android cameras.
+const esc = (s) => s.replace(/([\\;,:"])/g, "\\$1");
+function wifiPayload(name, pass, sec) {
+  if (sec === "nopass" || !pass) return `WIFI:T:nopass;S:${esc(name)};;`;
+  return `WIFI:T:${sec};S:${esc(name)};P:${esc(pass)};;`;
+}
 
 function draw() {
   const url = $("url").value.trim() || location.origin + "/";
-  const qr = qrcode(0, "M");
-  qr.addData(url);
-  qr.make();
-  $("qr").innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
-  $("urlOut").textContent = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const shortUrl = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const name = $("wifiName").value.trim();
+  const pass = $("wifiPass").value;
+  const sec = $("wifiSec").value;
+  const two = name !== "";
+
   $("headlineOut").textContent = $("headline").value;
+  $("card").classList.toggle("two", two);
+  $("pairSteps").hidden = !two;
+
+  if (two) {
+    $("qrWifi").innerHTML = svg(wifiPayload(name, pass, sec));
+    $("qr2").innerHTML = svg(url);
+    $("urlOut2").textContent = shortUrl;
+    const t = $("wifiText");
+    t.textContent = "";
+    if ($("wifiShow").checked) {
+      const n = document.createElement("div");
+      n.append("Network: ", Object.assign(document.createElement("strong"), { textContent: name }));
+      t.append(n);
+      if (sec !== "nopass" && pass) {
+        const p = document.createElement("div");
+        p.append("Password: ", Object.assign(document.createElement("strong"), { textContent: pass }));
+        t.append(p);
+      }
+    }
+  } else {
+    $("qr").innerHTML = svg(url);
+    $("urlOut").textContent = shortUrl;
+  }
 }
-$("url").addEventListener("input", draw);
-$("headline").addEventListener("input", draw);
+for (const id of ["url", "headline", "wifiName", "wifiPass", "wifiSec", "wifiShow"]) {
+  $(id).addEventListener("input", draw);
+  $(id).addEventListener("change", draw);
+}
 draw();
 </script>
 </body>

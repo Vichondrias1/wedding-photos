@@ -53,6 +53,14 @@ export default {
   // address you open the admin page at.                   Override: SITE_URL
   siteUrl: "",
 
+  // Optional venue Wi-Fi, printed as a second QR code on the table card so
+  // guests can join before uploading. Leave "" for no Wi-Fi code. You can also
+  // type these on the QR card page instead. Only the admin-only QR card page
+  // ever sees them.
+  wifiName: "", //                                        Override: WIFI_NAME
+  wifiPassword: "", //                                    Override: WIFI_PASSWORD
+  wifiSecurity: "WPA", // "WPA" (almost all), "WEP", or "nopass" for open Wi-Fi.  Override: WIFI_SECURITY
+
   // Free R2 storage, used for the storage meter on the admin page.
   storageLimitGB: 10,
 };

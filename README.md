@@ -170,6 +170,7 @@ All your details live in **one file**: `src/config.js`. Open it in any text edit
 | `font` | `"serif"` (elegant) or `"modern"` | `"serif"` |
 | `headerPhoto` | Optional photo at the top (`""` for none) | `"https://…/us.jpg"` or `"/header.jpg"` |
 | `siteUrl` | Optional: the link printed on the QR card | `""` (uses the site's own address) |
+| `wifiName`, `wifiPassword`, `wifiSecurity` | Optional venue Wi-Fi, printed as a second "join the Wi-Fi" QR code on the table card. Only the admin-only QR card page sees them. You can also type them on the card page instead. | `"Venue Guest"`, `"…"`, `"WPA"` |
 
 **About the upload times:** the part after the time (`-04:00`, `+08:00`) is your time zone's offset from UTC. Manila is `+08:00`, New York is `-04:00` in summer and `-05:00` in winter, London is `+01:00` in summer. If you're not sure, search "UTC offset" plus your city and the wedding date. Outside the window, guests see "Uploads open on …" or "Uploads are closed" instead of the upload button.
 
@@ -306,10 +307,13 @@ To check what a normal guest sees, open the address in a private/incognito windo
 
 1. Log in at `/admin`, then click **QR card**.
 2. Check the link under the code is your final address (edit it there if needed), and change the headline if you like.
-3. Click **Print**. In the print dialog choose:
+3. **Optional — venue Wi-Fi:** ask the venue for the guest Wi-Fi name and password and type them under **Venue Wi-Fi**. The card then shows two codes: **1 · Join the Wi-Fi** (scanning it joins the network in one tap on iPhone and Android) and **2 · Share your photos**. Untick **Print network name & password** if you'd rather not print the password as text. Leave the name empty for a single-code card.
+   - The Wi-Fi details you type aren't saved. To have them filled in every time, set `wifiName` / `wifiPassword` in `src/config.js` (private repo) or `WIFI_NAME` / `WIFI_PASSWORD` in `.dev.vars` and run `npm run push-secrets` (public repo).
+   - Venue Wi-Fi passwords often change. Check it with the venue the week of the wedding.
+4. Click **Print**. In the print dialog choose:
    - Paper size **4 × 6 in** (10 × 15 cm). Many printers have this as a "photo" size; a print shop can also print it.
    - Margins **None**, scale **100%**, and turn on **Background graphics**.
-4. Print **one test card first**, scan it with two different phones, and make sure it opens your site.
+5. Print **one test card first**. Scan it with an iPhone and an Android, and make sure the photo code opens your site. If you added Wi-Fi, scan that code **at the venue** (or with that exact network name and password) and check the phone joins.
 
 Tip: to print on regular paper, choose **Save as PDF**, then print that PDF at 100% on letter/A4 paper and cut it out.
 
@@ -319,7 +323,7 @@ Tip: to print on regular paper, choose **Save as PDF**, then print that PDF at 1
 
 - Put a QR card on every table, plus one at the entrance and the bar.
 - Ask your host/MC to mention it: "Scan the card on your table to share your photos!"
-- Venue Wi-Fi helps a lot with videos. Print the Wi-Fi name and password near the QR code if you can.
+- Venue Wi-Fi helps a lot with videos. Add the Wi-Fi code to the table cards (step 12) so guests can join in one tap.
 - Guests should keep the page open until everything finishes. The page keeps the screen awake and warns them if they try to leave. If an upload fails, it retries on its own, and they can **Tap to retry**.
 - Peek at `/admin` from your phone to watch photos arrive. Check the storage meter.
 - Guests who forget can still upload until the window closes (`uploadCloses`), from home.

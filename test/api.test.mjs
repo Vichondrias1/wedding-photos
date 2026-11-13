@@ -93,6 +93,15 @@ await test("correct password sets an HttpOnly cookie", async () => {
   eq((await req("/admin/card", {}, cookie)).status, 200, "card with cookie");
 });
 
+await test("Wi-Fi details only reach the admin-only QR card page", async () => {
+  for (const p of ["/", "/admin"]) {
+    const html = await (await req(p, {}, cookie)).text();
+    ok(!/wifiName|wifiPassword/.test(html), p + " leaks Wi-Fi settings");
+  }
+  const card = await (await req("/admin/card", {}, cookie)).text();
+  ok(card.includes('"wifiSecurity"'), "card page gets Wi-Fi settings");
+});
+
 // Start from an empty bucket.
 await req("/api/admin/delete-all", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "DELETE" }) }, cookie);
 

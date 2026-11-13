@@ -22,3 +22,7 @@ COLOR_ACCENT="#B89A6E"
 FONT=serif
 # HEADER_PHOTO=https://example.com/us.jpg
 # SITE_URL=https://photos.example.com
+# Optional venue Wi-Fi for the second QR code on the table card:
+# WIFI_NAME=Venue Guest
+# WIFI_PASSWORD=venue-wifi-password
+# WIFI_SECURITY=WPA

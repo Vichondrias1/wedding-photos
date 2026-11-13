@@ -98,6 +98,9 @@ const OVERRIDES = {
   HEADER_PHOTO: "headerPhoto",
   SITE_URL: "siteUrl",
   STORAGE_LIMIT_GB: "storageLimitGB",
+  WIFI_NAME: "wifiName",
+  WIFI_PASSWORD: "wifiPassword",
+  WIFI_SECURITY: "wifiSecurity",
 };
 const COLOR_OVERRIDES = { COLOR_BACKGROUND: "background", COLOR_PRIMARY: "primary", COLOR_TEXT: "text", COLOR_ACCENT: "accent" };
 
@@ -166,6 +169,12 @@ async function page(env, url, file) {
     siteUrl: cfg.siteUrl,
     storageLimitGB: cfg.storageLimitGB,
   };
+  // Wi-Fi details only go to the QR card page, which is admin-only.
+  if (file === "card.html") {
+    pub.wifiName = cfg.wifiName || "";
+    pub.wifiPassword = cfg.wifiPassword || "";
+    pub.wifiSecurity = cfg.wifiSecurity || "WPA";
+  }
   const c = cfg.colors;
   const inject =
     `<script>window.WEDDING=${JSON.stringify(pub).replace(/</g, "\\u003c")};</script>` +

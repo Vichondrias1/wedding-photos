@@ -47,9 +47,14 @@
   details.settings summary { cursor: pointer; font-size: 14px; color: var(--muted); margin: 18px 0 8px; }
   .lb { position: fixed; inset: 0; background: rgba(15,14,12,.94); z-index: 50; display: grid; grid-template-rows: auto 1fr auto; color: #fff; }
   .lb .bar-top, .lb .bar-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; font-size: 14px; }
-  .lb .stage { position: relative; display: grid; place-items: center; min-height: 0; padding: 0 8px; }
-  .lb img, .lb video { max-width: 100%; max-height: 100%; object-fit: contain; }
-  .lb .nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.12); border: 0; color: #fff; width: 44px; height: 64px; font-size: 26px; cursor: pointer; border-radius: 8px; }
+  /* The photo/video always fits the space between the two bars, letterboxed. */
+  .lb .stage { position: relative; min-height: 0; overflow: hidden; }
+  .lb .stage > img, .lb .stage > video { position: absolute; left: 8px; top: 0; width: calc(100% - 16px); height: 100%; object-fit: contain; display: block; background: transparent; }
+  .lb .stage > img.soft { filter: blur(6px); transform: scale(1.01); }
+  .lb .note { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 120px); background: rgba(0,0,0,.7); color: #fff; font-size: 14px; line-height: 1.4; text-align: center; padding: 8px 14px; border-radius: 4px; z-index: 1; }
+  .lb .spin { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; margin: -14px; border: 2px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; z-index: 1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .lb .nav { z-index: 2; position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.12); border: 0; color: #fff; width: 44px; height: 64px; font-size: 26px; cursor: pointer; border-radius: 8px; }
   .lb .prev { left: 8px; } .lb .next { right: 8px; }
   .lb .btn { min-height: 38px; font-size: 14px; padding: 0 14px; }
   .lb .btn.ghost { color: #fff; border-color: rgba(255,255,255,.5); }
@@ -186,7 +191,18 @@ let current = -1;
 // ---------- helpers ----------
 const fileUrl = (f, dl) => "/api/admin/file?key=" + encodeURIComponent(f.key) + (dl ? "&dl=1" : "");
 const thumbUrl = (f) => "/api/admin/thumb?key=" + encodeURIComponent(f.key);
-const isVideo = (f) => f.type.startsWith("video/");
+// Some phones upload with no type, so fall back to the file extension.
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|heic|heif|avif|bmp|tiff?|dng)$/i;
+const VIDEO_EXT = /\.(mp4|mov|m4v|webm|3gp|3g2|mkv|avi|mts|m2ts)$/i;
+function mediaKind(f) {
+  const t = String(f.type || "");
+  if (t.startsWith("video/")) return "video";
+  if (t.startsWith("image/")) return "image";
+  if (VIDEO_EXT.test(f.filename || "")) return "video";
+  if (IMAGE_EXT.test(f.filename || "")) return "image";
+  return "other";
+}
+const isVideo = (f) => mediaKind(f) === "video";
 const guestLabel = (g) => g || "(no name)";
 function bytes(n) {
   if (n < 1e6) return (n / 1e3).toFixed(0) + " KB";
@@ -270,7 +286,7 @@ $("refreshBtn").addEventListener("click", load);
 function renderGrid() {
   const g = $("guestFilter").value;
   const t = $("typeFilter").value;
-  shown = files.filter((f) => (g === "\u0000all" || f.guest === g) && (!t || f.type.startsWith(t)));
+  shown = files.filter((f) => (g === "\u0000all" || f.guest === g) && (!t || mediaKind(f) === t));
   const grid = $("grid");
   grid.innerHTML = "";
   $("empty").hidden = shown.length > 0;
@@ -316,24 +332,65 @@ function openLightbox(i) {
 function closeLightbox() {
   $("lightbox").hidden = true;
   document.body.style.overflow = "";
-  $("lbStage").querySelectorAll("img,video").forEach((el) => el.remove());
+  lbToken++;
+  clearStage();
+}
+let lbToken = 0;
+function clearStage() {
+  $("lbStage").querySelectorAll("img,video,.note,.spin").forEach((el) => {
+    if (el.tagName === "VIDEO") { el.pause(); el.removeAttribute("src"); el.load(); }
+    el.remove();
+  });
+}
+function stageNote(text) {
+  const n = document.createElement("div");
+  n.className = "note";
+  n.textContent = text;
+  $("lbStage").append(n);
 }
 function showCurrent() {
   const f = shown[current];
   if (!f) return closeLightbox();
+  const token = ++lbToken;
   const stage = $("lbStage");
-  stage.querySelectorAll("img,video").forEach((el) => el.remove());
-  let el;
-  if (isVideo(f)) {
-    el = document.createElement("video");
-    el.controls = true; el.playsInline = true; el.preload = "metadata";
-    if (f.hasThumb) el.poster = thumbUrl(f);
+  clearStage();
+  const kind = mediaKind(f);
+  if (kind === "video") {
+    const v = document.createElement("video");
+    v.controls = true; v.playsInline = true; v.preload = "metadata";
+    if (f.hasThumb) v.poster = thumbUrl(f);
+    v.onerror = () => {
+      if (token !== lbToken) return;
+      stageNote("This video can't play in this browser (often an iPhone HEVC video). Download it to watch.");
+    };
+    v.src = fileUrl(f);
+    stage.prepend(v);
+  } else if (kind === "image") {
+    // Show the small preview straight away, then swap in the full photo once it has loaded.
+    const img = document.createElement("img");
+    img.alt = f.filename;
+    stage.prepend(img);
+    const spin = document.createElement("div");
+    spin.className = "spin";
+    stage.append(spin);
+    if (f.hasThumb) { img.src = thumbUrl(f); img.className = "soft"; }
+    const full = new Image();
+    full.onload = () => {
+      if (token !== lbToken) return;
+      img.src = full.src; img.className = ""; spin.remove();
+    };
+    full.onerror = () => {
+      if (token !== lbToken) return;
+      spin.remove(); img.className = "";
+      stageNote(f.hasThumb
+        ? "Showing a small preview: this browser can't open the full photo (often an iPhone HEIC photo). Download it to see it in full."
+        : "This browser can't open this photo (often an iPhone HEIC photo). Download it to see it.");
+    };
+    full.src = fileUrl(f);
   } else {
-    el = document.createElement("img");
-    el.alt = f.filename;
+    if (f.hasThumb) { const img = document.createElement("img"); img.alt = f.filename; img.src = thumbUrl(f); stage.prepend(img); }
+    stageNote("No preview for this kind of file. Download it to open it.");
   }
-  el.src = fileUrl(f);
-  stage.prepend(el);
   $("lbInfo").textContent = `${guestLabel(f.guest)} · ${f.filename}`;
   $("lbMeta").textContent = `${current + 1} / ${shown.length} · ${bytes(f.size)} · ${fmt(f.uploadedAt, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
   $("lbDownload").href = fileUrl(f, true);

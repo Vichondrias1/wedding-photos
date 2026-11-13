@@ -34,6 +34,45 @@
   .item.error .status { color: var(--danger); }
   .retry { border: 0; background: none; color: var(--danger); font: 600 12px var(--body); text-decoration: underline; padding: 0; cursor: pointer; }
   .thanks { text-align: center; padding: 8px 0 2px; font-family: var(--display); font-size: 24px; }
+  .countdown { display: flex; justify-content: center; gap: 10px; margin: 18px 0 4px; }
+  .countdown div { background: var(--soft); border-radius: 12px; padding: 10px 6px 8px; min-width: 62px; }
+  .countdown b { display: block; font-family: var(--display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--primary); }
+  .countdown small { font-size: 12px; color: var(--muted); }
+  .burst { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+
+  /* Motion: only for people whose phone isn't set to reduce motion. */
+  @property --reveal { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes reveal { from { --reveal: 0deg; } to { --reveal: 400deg; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes sheen { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  @keyframes tick { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .motion .hero img.logo { opacity: 0; }
+    .motion .hero img.logo.go {
+      opacity: 1;
+      -webkit-mask-image: conic-gradient(from 200deg, #000 calc(var(--reveal) - 40deg), transparent var(--reveal));
+      mask-image: conic-gradient(from 200deg, #000 calc(var(--reveal) - 40deg), transparent var(--reveal));
+      animation: reveal 1.5s cubic-bezier(.45, 0, .2, 1) both;
+    }
+    .motion .hero h1 .w { display: inline-block; white-space: nowrap; }
+    .motion .hero h1 .ch { display: inline-block; opacity: 0; animation: rise .55s ease-out both; }
+    .motion .hero .kicker, .motion .hero .meta, .motion .hero .welcome { animation: fade .7s ease-out both; }
+    .motion .hero .kicker { animation-delay: var(--t0); }
+    .motion .hero .meta { animation-delay: var(--t1); }
+    .motion .hero .rule { animation: draw .7s ease-out both; animation-delay: var(--t2); }
+    .motion .hero .welcome { animation-delay: var(--t3); }
+    .motion #uploader, .motion #closed { animation: rise .6s ease-out both; animation-delay: var(--t3); }
+    #queue.busy .item:not(.done):not(.error) .bar > i, #queue.busy #totalBar {
+      background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .5) 50%, transparent 70%);
+      background-size: 200% 100%;
+      animation: sheen 1.6s linear infinite;
+    }
+    .item { animation: rise .35s ease-out both; }
+    .thanks:not([hidden]) { animation: rise .6s ease-out both; }
+    .countdown b.tick { animation: tick .35s ease-out; }
+  }
   .admin-note { text-align: center; font-size: 13px; background: var(--soft); border-radius: 10px; padding: 8px 12px; margin-top: 16px; }
 </style>
 </head>
@@ -53,6 +92,12 @@
 
   <section class="card closed" id="closed" hidden>
     <h2 id="closedTitle"></h2>
+    <div class="countdown" id="countdown" hidden>
+      <div><b id="cdD">0</b><small>days</small></div>
+      <div><b id="cdH">00</b><small>hours</small></div>
+      <div><b id="cdM">00</b><small>min</small></div>
+      <div><b id="cdS">00</b><small>sec</small></div>
+    </div>
     <p class="hint" id="closedHint"></p>
   </section>
 
@@ -91,7 +136,80 @@ $("names").textContent = W.coupleNames;
 $("meta").textContent = [W.weddingDate, W.venue].filter(Boolean).join(" · ");
 $("welcome").textContent = W.welcomeMessage;
 if (W.headerPhoto) { $("headerPhoto").src = W.headerPhoto; $("headerPhoto").hidden = false; }
-if (W.logo) { $("logo").src = W.logo; $("logo").hidden = false; }
+if (W.logo) {
+  const img = $("logo");
+  img.onload = () => img.classList.add("go");
+  img.src = W.logo;
+  img.hidden = false;
+  if (img.complete) img.classList.add("go");
+}
+
+// ---------- motion ----------
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!calm) {
+  // Names rise in letter by letter (words never split across lines).
+  const h1 = $("names");
+  h1.setAttribute("aria-label", W.coupleNames);
+  const start = W.logo ? 0.9 : 0.25;
+  let n = 0;
+  h1.textContent = "";
+  W.coupleNames.split(" ").forEach((word, wi) => {
+    if (wi) h1.append(" ");
+    const w = document.createElement("span");
+    w.className = "w";
+    w.setAttribute("aria-hidden", "true");
+    for (const ch of word) {
+      const c = document.createElement("span");
+      c.className = "ch";
+      c.textContent = ch;
+      c.style.animationDelay = (start + n++ * 0.045).toFixed(3) + "s";
+      w.append(c);
+    }
+    h1.append(w);
+  });
+  const end = start + n * 0.045 + 0.3;
+  const root = document.documentElement.style;
+  root.setProperty("--t0", Math.max(0, start - 0.2).toFixed(2) + "s");
+  root.setProperty("--t1", end.toFixed(2) + "s");
+  root.setProperty("--t2", (end + 0.25).toFixed(2) + "s");
+  root.setProperty("--t3", (end + 0.5).toFixed(2) + "s");
+  document.documentElement.classList.add("motion");
+}
+
+// Petal burst when every upload has finished. Runs about 3 seconds, then stops.
+function burst() {
+  if (calm) return;
+  const cv = document.createElement("canvas");
+  cv.className = "burst";
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const w = innerWidth, h = innerHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  document.body.append(cv);
+  const g = cv.getContext("2d");
+  g.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement);
+  const cols = [css.getPropertyValue("--primary"), css.getPropertyValue("--accent"), "#b48cc8", "#efe3d3", "#d9895a"].map((c) => c.trim()).filter(Boolean);
+  const top = $("thanks").getBoundingClientRect().top;
+  const ox = w / 2, oy = top > 0 && top < h ? top : h * 0.5;
+  const ps = Array.from({ length: 48 }, () => {
+    const a = Math.random() * Math.PI * 2, v = 4 + Math.random() * 7;
+    return { x: ox, y: oy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 5, r: Math.random() * 6.3, vr: (Math.random() - 0.5) * 0.16, s: 5 + Math.random() * 6, c: cols[(Math.random() * cols.length) | 0] };
+  });
+  const t0 = performance.now();
+  (function step(t) {
+    g.clearRect(0, 0, w, h);
+    const fade = Math.max(0, Math.min(1, 1 - (t - t0 - 2200) / 1000));
+    for (const p of ps) {
+      p.vy += 0.18; p.vx *= 0.98; p.vy *= 0.985; p.vx += Math.sin(p.y / 40) * 0.08;
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r);
+      g.globalAlpha = 0.9 * fade; g.fillStyle = p.c;
+      g.beginPath(); g.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+    if (fade > 0) requestAnimationFrame(step); else cv.remove();
+  })(t0);
+}
 
 // ---------- upload window ----------
 function fmtDate(iso, withTime) {
@@ -114,12 +232,38 @@ async function refreshStatus() {
     if (s.state === "before") {
       $("closedTitle").textContent = "Uploads open on " + fmtDate(W.uploadOpens);
       $("closedHint").textContent = "Come back from " + fmtDate(W.uploadOpens, true) + " to share your photos and videos.";
+      startCountdown();
     } else {
       $("closedTitle").textContent = "Uploads are closed";
       $("closedHint").textContent = "Thank you so much for sharing your photos and videos with us!";
     }
   }
   return s;
+}
+let countdownTimer = 0;
+function startCountdown() {
+  const target = Date.parse(W.uploadOpens);
+  if (isNaN(target) || countdownTimer) return;
+  $("countdown").hidden = false;
+  const ids = ["cdD", "cdH", "cdM", "cdS"];
+  const tick = () => {
+    const left = Math.max(0, Math.floor((target - Date.now()) / 1000));
+    const v = [Math.floor(left / 86400), Math.floor((left % 86400) / 3600), Math.floor((left % 3600) / 60), left % 60];
+    v.forEach((x, i) => {
+      const el = $(ids[i]);
+      const text = i ? String(x).padStart(2, "0") : String(x);
+      if (el.textContent !== text) {
+        el.textContent = text;
+        el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick");
+      }
+    });
+    if (left === 0) {
+      clearInterval(countdownTimer);
+      setTimeout(refreshStatus, 1500);
+    }
+  };
+  tick();
+  countdownTimer = setInterval(tick, 1000);
 }
 let status = await refreshStatus();
 // Flip the page open automatically if someone is waiting on it.
@@ -392,7 +536,10 @@ function render() {
     ? `Uploading <b>${done}</b> of <b>${items.length}</b>… keep this page open`
     : `<b>${done}</b> of <b>${items.length}</b> uploaded` + (failed ? ` · <b>${failed}</b> failed` : "");
   $("retryAll").hidden = !failed || active > 0;
-  $("thanks").hidden = !(items.length && done === items.length);
+  const allDone = !!items.length && done === items.length;
+  if (allDone && $("thanks").hidden) burst();
+  $("thanks").hidden = !allDone;
+  $("queue").classList.toggle("busy", active > 0);
   for (const it of items) if (it.state === "done") it.li.querySelector(".bar > i").style.width = "100%";
   renderTotals();
   setBusy(active > 0);

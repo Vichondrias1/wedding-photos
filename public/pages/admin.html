@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>{{COUPLE}} · Admin</title>
+<link rel="stylesheet" href="/app.css">
+<!--WEDDING-->
+<style>
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px; }
+  .login { max-width: 360px; margin: 12vh auto 0; text-align: center; }
+  .login h1 { font-size: 40px; margin-bottom: 4px; }
+  .login p { color: var(--muted); margin: 0 0 22px; }
+  .login form { display: grid; gap: 12px; }
+  .err { color: var(--danger); font-size: 14px; min-height: 20px; }
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .top h1 { font-size: 38px; }
+  .top .sub { color: var(--muted); font-size: 14px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .stat .n { font-family: var(--display); font-size: 32px; line-height: 1.1; }
+  .stat .l { font-size: 13px; color: var(--muted); }
+  .stat.storage { grid-column: span 2; }
+  @media (max-width: 420px) { .stat.storage { grid-column: span 1; } }
+  .stat .bar { margin-top: 10px; height: 8px; }
+  .stat.warn .bar > i { background: #c08a2d; }
+  .stat.over .bar > i { background: var(--danger); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0 14px; }
+  .toolbar select { width: auto; min-width: 200px; min-height: 40px; }
+  .toolbar .count { color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  @media (max-width: 480px) { .grid { grid-template-columns: repeat(3, 1fr); gap: 4px; } }
+  .tile { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--soft); cursor: pointer; border: 0; padding: 0; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .ph { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+  .tile .badge { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 999px; }
+  .tile .who { position: absolute; left: 0; right: 0; top: 0; padding: 4px 7px; font-size: 11px; color: #fff; background: linear-gradient(rgba(0,0,0,.55), transparent); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 0; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .panel h2 { font-size: 24px; margin-bottom: 8px; }
+  .panel p { margin: 4px 0 10px; font-size: 14px; color: var(--muted); }
+  .guestzips { display: flex; flex-wrap: wrap; gap: 8px; }
+  details.settings summary { cursor: pointer; font-size: 14px; color: var(--muted); margin: 18px 0 8px; }
+  .lb { position: fixed; inset: 0; background: rgba(15,14,12,.94); z-index: 50; display: grid; grid-template-rows: auto 1fr auto; color: #fff; }
+  .lb .bar-top, .lb .bar-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; font-size: 14px; }
+  .lb .stage { position: relative; display: grid; place-items: center; min-height: 0; padding: 0 8px; }
+  .lb img, .lb video { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .lb .nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.12); border: 0; color: #fff; width: 44px; height: 64px; font-size: 26px; cursor: pointer; border-radius: 8px; }
+  .lb .prev { left: 8px; } .lb .next { right: 8px; }
+  .lb .btn { min-height: 38px; font-size: 14px; padding: 0 14px; }
+  .lb .btn.ghost { color: #fff; border-color: rgba(255,255,255,.5); }
+  .lb .info { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .progress { position: fixed; inset: auto 16px 16px 16px; max-width: 460px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: var(--radius); padding: 14px 16px; z-index: 60; font-size: 14px; }
+  .progress .bar { margin-top: 8px; background: rgba(255,255,255,.2); }
+</style>
+</head>
+<body>
+<main>
+  <!-- Login -->
+  <section class="login" id="loginView" hidden>
+    <h1 id="loginNames"></h1>
+    <p>Admin</p>
+    <form id="loginForm">
+      <input type="password" id="password" placeholder="Admin password" autocomplete="current-password" required>
+      <button class="btn" type="submit">Log in</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="appView" hidden>
+    <div class="top">
+      <div>
+        <h1 id="title"></h1>
+        <div class="sub" id="windowInfo"></div>
+      </div>
+      <div class="actions">
+        <a class="btn small ghost" href="/" target="_blank">Upload page ↗</a>
+        <a class="btn small ghost" href="/admin/card" target="_blank">QR card ↗</a>
+        <button class="btn small" id="zipBtn" type="button">Download all (.zip)</button>
+        <button class="btn small ghost" id="refreshBtn" type="button">Refresh</button>
+        <button class="btn small ghost" id="logoutBtn" type="button">Log out</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat storage" id="storageStat">
+        <div class="n" id="storageN">—</div>
+        <div class="l" id="storageL">of free storage used</div>
+        <div class="bar"><i id="storageBar"></i></div>
+      </div>
+      <div class="stat"><div class="n" id="fileN">—</div><div class="l" id="fileL">files</div></div>
+      <div class="stat"><div class="n" id="guestN">—</div><div class="l">guests</div></div>
+    </div>
+
+    <div class="panel" id="fallbackPanel" hidden>
+      <h2>Download by guest</h2>
+      <p>Your browser can't stream one big zip straight to disk (that needs Chrome or Edge on a computer), so download one zip per guest instead. Each zip is built in memory — very large ones may fail; if so, use Chrome or Edge on a computer.</p>
+      <div class="guestzips" id="guestZips"></div>
+    </div>
+
+    <div class="toolbar">
+      <select id="guestFilter" aria-label="Filter by guest"></select>
+      <select id="typeFilter" aria-label="Filter by type">
+        <option value="">Photos &amp; videos</option>
+        <option value="image">Photos only</option>
+        <option value="video">Videos only</option>
+      </select>
+      <span class="count" id="countInfo"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden>No uploads yet.</div>
+
+    <details class="settings">
+      <summary>Settings &amp; clean-up</summary>
+      <div class="panel">
+        <h2>Header photo</h2>
+        <p id="headerInfo">Shown at the top of the guest page.</p>
+        <input type="file" id="headerFile" accept="image/*" hidden>
+        <div class="actions">
+          <button class="btn small" id="headerBtn" type="button">Upload header photo</button>
+          <button class="btn small danger" id="headerDel" type="button">Remove</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Delete everything</h2>
+        <p>Deletes every uploaded photo, video and thumbnail. Use this to clear out test uploads before the wedding, or after you've downloaded and backed up everything. This can't be undone.</p>
+        <button class="btn small danger" id="deleteAllBtn" type="button">Delete all uploads…</button>
+      </div>
+    </details>
+  </section>
+</main>
+
+<div class="lb" id="lightbox" hidden>
+  <div class="bar-top">
+    <span class="info" id="lbInfo"></span>
+    <button class="btn small ghost" id="lbClose" type="button">Close ✕</button>
+  </div>
+  <div class="stage" id="lbStage">
+    <button class="nav prev" id="lbPrev" type="button" aria-label="Previous">‹</button>
+    <button class="nav next" id="lbNext" type="button" aria-label="Next">›</button>
+  </div>
+  <div class="bar-bottom">
+    <span id="lbMeta"></span>
+    <span class="actions">
+      <a class="btn small" id="lbDownload" href="#">Download</a>
+      <button class="btn small danger" id="lbDelete" type="button">Delete</button>
+    </span>
+  </div>
+</div>
+
+<div class="progress" id="progress" hidden>
+  <div id="progressText"></div>
+  <div class="bar"><i id="progressBar"></i></div>
+</div>
+
+<script type="module">
+import { downloadZip } from "/vendor/client-zip.js";
+
+const W = window.WEDDING;
+const $ = (id) => document.getElementById(id);
+if (W.font === "modern") document.documentElement.classList.add("font-modern");
+$("loginNames").textContent = W.coupleNames;
+$("title").textContent = W.coupleNames;
+
+let files = [];
+let shown = [];
+let current = -1;
+
+// ---------- helpers ----------
+const fileUrl = (f, dl) => "/api/admin/file?key=" + encodeURIComponent(f.key) + (dl ? "&dl=1" : "");
+const thumbUrl = (f) => "/api/admin/thumb?key=" + encodeURIComponent(f.key);
+const isVideo = (f) => f.type.startsWith("video/");
+const guestLabel = (g) => g || "(no name)";
+function bytes(n) {
+  if (n < 1e6) return (n / 1e3).toFixed(0) + " KB";
+  if (n < 1e9) return (n / 1e6).toFixed(1) + " MB";
+  return (n / 1e9).toFixed(2) + " GB";
+}
+function fmt(iso, opts) {
+  try { return new Intl.DateTimeFormat("en-US", { timeZone: W.timezone, ...opts }).format(new Date(iso)); }
+  catch { return iso; }
+}
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.append(t);
+  setTimeout(() => t.remove(), 3500);
+}
+async function api(path, opts = {}) {
+  const res = await fetch(path, { cache: "no-store", ...opts });
+  if (res.status === 401) { showLogin(); throw new Error("Please log in."); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Request failed (" + res.status + ")");
+  return data;
+}
+
+// ---------- login ----------
+function showLogin() { $("appView").hidden = true; $("loginView").hidden = false; $("password").focus(); }
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("loginErr").textContent = "";
+  const res = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("password").value }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { $("loginErr").textContent = data.error || "Login failed."; return; }
+  $("password").value = "";
+  if (new URLSearchParams(location.search).get("next") === "card") { location.href = "/admin/card"; return; }
+  load();
+});
+$("logoutBtn").addEventListener("click", async () => { await fetch("/api/admin/logout", { method: "POST" }); showLogin(); });
+
+// ---------- load ----------
+async function load() {
+  let data;
+  try { data = await api("/api/admin/files"); } catch (e) { if (!$("loginView").hidden) return; toast(e.message); return; }
+  $("loginView").hidden = true;
+  $("appView").hidden = false;
+  files = data.files;
+  const s = data.stats;
+  const pct = s.totalBytes / s.limitBytes;
+  $("storageN").textContent = bytes(s.totalBytes) + " / " + Math.round(s.limitBytes / 1e9) + " GB";
+  $("storageL").textContent = pct >= 1 ? "Over the free storage — download and delete soon to keep costs tiny" : Math.round(pct * 100) + "% of free storage used";
+  $("storageBar").style.width = Math.min(100, pct * 100) + "%";
+  $("storageStat").classList.toggle("warn", pct >= 0.8 && pct < 1);
+  $("storageStat").classList.toggle("over", pct >= 1);
+  $("fileN").textContent = s.fileCount;
+  $("fileL").textContent = `files · ${s.photos} photos, ${s.videos} videos`;
+  $("guestN").textContent = s.guestCount;
+  $("windowInfo").textContent = `Guest uploads open ${fmt(W.uploadOpens, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} – ${fmt(W.uploadCloses, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} (${W.timezone})`;
+
+  const sel = $("guestFilter");
+  const prev = sel.value;
+  const counts = new Map();
+  for (const f of files) counts.set(f.guest, (counts.get(f.guest) || 0) + 1);
+  sel.innerHTML = "";
+  sel.append(new Option(`All guests (${files.length})`, "\u0000all"));
+  for (const [g, n] of [...counts].sort((a, b) => guestLabel(a[0]).localeCompare(guestLabel(b[0])))) sel.append(new Option(`${guestLabel(g)} (${n})`, g));
+  sel.value = [...sel.options].some((o) => o.value === prev) ? prev : "\u0000all";
+  $("headerInfo").textContent = W.headerPhoto && !W.headerFromBucket
+    ? "A header photo is set in your config (HEADER_PHOTO). Clear that to use an uploaded one instead."
+    : "Shown at the top of the guest page. Currently: " + (W.headerPhoto ? "set" : "none") + ".";
+  renderGrid();
+}
+
+// ---------- grid ----------
+$("guestFilter").addEventListener("change", renderGrid);
+$("typeFilter").addEventListener("change", renderGrid);
+$("refreshBtn").addEventListener("click", load);
+
+function renderGrid() {
+  const g = $("guestFilter").value;
+  const t = $("typeFilter").value;
+  shown = files.filter((f) => (g === "\u0000all" || f.guest === g) && (!t || f.type.startsWith(t)));
+  const grid = $("grid");
+  grid.innerHTML = "";
+  $("empty").hidden = shown.length > 0;
+  $("countInfo").textContent = shown.length === files.length ? "" : `${shown.length} shown · ${bytes(shown.reduce((a, f) => a + f.size, 0))}`;
+  const frag = document.createDocumentFragment();
+  shown.forEach((f, i) => {
+    const b = document.createElement("button");
+    b.className = "tile";
+    b.type = "button";
+    b.title = `${f.filename} — ${guestLabel(f.guest)}`;
+    if (f.hasThumb || (!isVideo(f) && f.size < 3e6 && /jpe?g|png|webp|gif/.test(f.type))) {
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.alt = f.filename;
+      img.src = f.hasThumb ? thumbUrl(f) : fileUrl(f);
+      img.onerror = () => { img.remove(); addPlaceholder(b, f); };
+      b.append(img);
+    } else addPlaceholder(b, f);
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = guestLabel(f.guest);
+    b.append(who);
+    if (isVideo(f)) { const v = document.createElement("span"); v.className = "badge"; v.textContent = "▶ video"; b.append(v); }
+    b.onclick = () => openLightbox(i);
+    frag.append(b);
+  });
+  grid.append(frag);
+}
+function addPlaceholder(tile, f) {
+  const p = document.createElement("span");
+  p.className = "ph";
+  p.textContent = (isVideo(f) ? "▶ " : "✦ ") + f.filename;
+  tile.prepend(p);
+}
+
+// ---------- lightbox ----------
+function openLightbox(i) {
+  current = i;
+  $("lightbox").hidden = false;
+  document.body.style.overflow = "hidden";
+  showCurrent();
+}
+function closeLightbox() {
+  $("lightbox").hidden = true;
+  document.body.style.overflow = "";
+  $("lbStage").querySelectorAll("img,video").forEach((el) => el.remove());
+}
+function showCurrent() {
+  const f = shown[current];
+  if (!f) return closeLightbox();
+  const stage = $("lbStage");
+  stage.querySelectorAll("img,video").forEach((el) => el.remove());
+  let el;
+  if (isVideo(f)) {
+    el = document.createElement("video");
+    el.controls = true; el.playsInline = true; el.preload = "metadata";
+    if (f.hasThumb) el.poster = thumbUrl(f);
+  } else {
+    el = document.createElement("img");
+    el.alt = f.filename;
+  }
+  el.src = fileUrl(f);
+  stage.prepend(el);
+  $("lbInfo").textContent = `${guestLabel(f.guest)} · ${f.filename}`;
+  $("lbMeta").textContent = `${current + 1} / ${shown.length} · ${bytes(f.size)} · ${fmt(f.uploadedAt, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+  $("lbDownload").href = fileUrl(f, true);
+  $("lbPrev").hidden = current === 0;
+  $("lbNext").hidden = current === shown.length - 1;
+}
+$("lbClose").onclick = closeLightbox;
+$("lbPrev").onclick = () => { if (current > 0) { current--; showCurrent(); } };
+$("lbNext").onclick = () => { if (current < shown.length - 1) { current++; showCurrent(); } };
+document.addEventListener("keydown", (e) => {
+  if ($("lightbox").hidden) return;
+  if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowLeft") $("lbPrev").click();
+  if (e.key === "ArrowRight") $("lbNext").click();
+});
+let touchX = null;
+$("lbStage").addEventListener("touchstart", (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+$("lbStage").addEventListener("touchend", (e) => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  touchX = null;
+  if (Math.abs(dx) > 60) (dx > 0 ? $("lbPrev") : $("lbNext")).click();
+});
+$("lbDelete").onclick = async () => {
+  const f = shown[current];
+  if (!confirm(`Delete "${f.filename}" from ${guestLabel(f.guest)}? This can't be undone.`)) return;
+  try {
+    await api("/api/admin/file?key=" + encodeURIComponent(f.key), { method: "DELETE" });
+    files = files.filter((x) => x.key !== f.key);
+    shown.splice(current, 1);
+    if (current >= shown.length) current = shown.length - 1;
+    toast("Deleted.");
+    if (shown.length) showCurrent(); else closeLightbox();
+    load();
+  } catch (e) { toast(e.message); }
+};
+
+// ---------- download all ----------
+function zipEntries(list) {
+  // One folder per guest; rename duplicates inside a folder ("IMG_1.jpg" → "IMG_1 (2).jpg").
+  const used = new Set();
+  return list.map((f) => {
+    const folder = guestLabel(f.guest).replace(/[\\/:*?"<>|]/g, "_").trim() || "(no name)";
+    let name = f.filename.replace(/[\\/:*?"<>|]/g, "_");
+    let path = `${folder}/${name}`;
+    for (let n = 2; used.has(path.toLowerCase()); n++) {
+      const dot = name.lastIndexOf(".");
+      path = `${folder}/${dot > 0 ? name.slice(0, dot) + ` (${n})` + name.slice(dot) : name + ` (${n})`}`;
+    }
+    used.add(path.toLowerCase());
+    return { f, path };
+  });
+}
+async function* fetchAll(entries, onFile) {
+  for (const { f, path } of entries) {
+    onFile(f);
+    let res;
+    for (let attempt = 1; ; attempt++) {
+      res = await fetch(fileUrl(f), { cache: "no-store" });
+      if (res.ok) break;
+      if (attempt >= 3) throw new Error(`Couldn't download ${f.filename} (${res.status})`);
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+    yield { name: path, input: res, lastModified: new Date(f.uploadedAt), size: f.size };
+  }
+}
+function showProgress(text, pct) {
+  $("progress").hidden = false;
+  $("progressText").textContent = text;
+  $("progressBar").style.width = pct + "%";
+}
+let zipping = false;
+window.addEventListener("beforeunload", (e) => { if (zipping) { e.preventDefault(); e.returnValue = ""; } });
+
+$("zipBtn").addEventListener("click", async () => {
+  if (!files.length) return toast("Nothing to download yet.");
+  if (!("showSaveFilePicker" in window)) {
+    buildGuestButtons();
+    $("fallbackPanel").hidden = false;
+    $("fallbackPanel").scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  const name = (W.coupleNames || "wedding").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").toLowerCase() + "-photos.zip";
+  let handle;
+  try {
+    handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "Zip archive", accept: { "application/zip": [".zip"] } }] });
+  } catch { return; } // cancelled
+  const entries = zipEntries(files);
+  const total = files.reduce((a, f) => a + f.size, 0);
+  let written = 0, count = 0;
+  zipping = true;
+  try {
+    const writable = await handle.createWritable();
+    const counter = new TransformStream({
+      transform(chunk, ctl) {
+        written += chunk.byteLength;
+        showProgress(`Saving zip… ${count} of ${files.length} files · ${bytes(written)} of ~${bytes(total)}`, Math.min(100, (written / total) * 100));
+        ctl.enqueue(chunk);
+      },
+    });
+    const meta = entries.map(({ f, path }) => ({ name: path, size: f.size }));
+    await downloadZip(fetchAll(entries, () => count++), { metadata: meta }).body.pipeThrough(counter).pipeTo(writable);
+    showProgress(`Done! Saved ${files.length} files (${bytes(written)}).`, 100);
+    setTimeout(() => ($("progress").hidden = true), 6000);
+  } catch (e) {
+    showProgress("Download failed: " + e.message + " — try again.", 0);
+    setTimeout(() => ($("progress").hidden = true), 10000);
+  } finally { zipping = false; }
+});
+
+function buildGuestButtons() {
+  const by = new Map();
+  for (const f of files) { if (!by.has(f.guest)) by.set(f.guest, []); by.get(f.guest).push(f); }
+  const box = $("guestZips");
+  box.innerHTML = "";
+  for (const [g, list] of [...by].sort((a, b) => guestLabel(a[0]).localeCompare(guestLabel(b[0])))) {
+    const b = document.createElement("button");
+    b.className = "btn small ghost";
+    b.type = "button";
+    const size = list.reduce((a, f) => a + f.size, 0);
+    b.textContent = `${guestLabel(g)} · ${list.length} files · ${bytes(size)}`;
+    b.onclick = async () => {
+      b.disabled = true;
+      zipping = true;
+      let count = 0;
+      try {
+        const entries = zipEntries(list);
+        showProgress(`Preparing ${guestLabel(g)}…`, 0);
+        const blob = await downloadZip(fetchAll(entries, () => showProgress(`Zipping ${guestLabel(g)}… ${++count} of ${list.length}`, (count / list.length) * 100))).blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = guestLabel(g).replace(/[^\p{L}\p{N}]+/gu, "-") + ".zip";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        showProgress(`${guestLabel(g)} downloaded.`, 100);
+        b.textContent = "✓ " + b.textContent;
+      } catch (e) {
+        showProgress("Failed: " + e.message, 0);
+      } finally {
+        zipping = false;
+        b.disabled = false;
+        setTimeout(() => ($("progress").hidden = true), 4000);
+      }
+    };
+    box.append(b);
+  }
+}
+
+// ---------- header photo ----------
+$("headerBtn").onclick = () => $("headerFile").click();
+$("headerFile").onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    await api("/api/admin/header", { method: "PUT", headers: { "Content-Type": file.type || "image/jpeg" }, body: file });
+    toast("Header photo updated. Reload the guest page to see it.");
+    W.headerPhoto = "set"; W.headerFromBucket = true; load();
+  } catch (err) { toast(err.message); }
+};
+$("headerDel").onclick = async () => {
+  if (!confirm("Remove the uploaded header photo?")) return;
+  try { await api("/api/admin/header", { method: "DELETE" }); W.headerPhoto = ""; toast("Header photo removed."); load(); }
+  catch (err) { toast(err.message); }
+};
+
+// ---------- delete all ----------
+$("deleteAllBtn").onclick = async () => {
+  const typed = prompt(`This permanently deletes ALL ${files.length} uploads. Download and back up first!\n\nType DELETE to confirm:`);
+  if (typed !== "DELETE") return;
+  try {
+    const r = await api("/api/admin/delete-all", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "DELETE" }) });
+    toast(`Deleted ${r.deleted} objects.`);
+    load();
+  } catch (e) { toast(e.message); }
+};
+
+load();
+</script>
+</body>
+</html>

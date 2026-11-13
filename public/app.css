@@ -1,0 +1,104 @@
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: url("/vendor/fonts/cormorant-garamond-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: url("/vendor/fonts/cormorant-garamond-latin-400-italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: url("/vendor/fonts/cormorant-garamond-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #fbf8f1;
+  --primary: #7d8f69;
+  --text: #3b3a36;
+  --muted: color-mix(in srgb, var(--text) 60%, var(--bg));
+  --line: color-mix(in srgb, var(--text) 14%, var(--bg));
+  --card: color-mix(in srgb, #fff 70%, var(--bg));
+  --soft: color-mix(in srgb, var(--primary) 12%, var(--bg));
+  --danger: #a4493d;
+  --display: "Cormorant Garamond", "Cormorant", Garamond, "Times New Roman", serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius: 14px;
+}
+.font-modern {
+  --display: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+h1, h2, h3, .display { font-family: var(--display); font-weight: 400; line-height: 1.15; margin: 0; }
+a { color: var(--primary); }
+[hidden] { display: none !important; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+  font: 500 16px/1 var(--body);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.ghost { background: transparent; color: var(--primary); }
+.btn.small { min-height: 36px; padding: 0 14px; font-size: 14px; }
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 2px; }
+
+input[type="text"], input[type="password"], input[type="url"], select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  font: 16px var(--body); /* 16px stops iOS zooming in */
+}
+label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--primary); transition: width 0.2s; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  z-index: 100;
+  max-width: calc(100% - 32px);
+}

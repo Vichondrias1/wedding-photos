@@ -1,0 +1,23 @@
+# Copy this file to .dev.vars (which is never committed) and fill it in.
+#
+#  - `npm run dev` uses it for local testing.
+#  - `npm run push-secrets` uploads every line to Cloudflare as an encrypted
+#    secret, so your real details never have to be in GitHub.
+#
+# Delete any line you don't need — config.js is used for anything missing.
+
+ADMIN_PASSWORD=choose-a-long-password-here
+
+COUPLE_NAMES=Alex & Sam
+WEDDING_DATE=September 18, 2027
+VENUE=The Garden Pavilion
+WELCOME_MESSAGE=Thank you for celebrating with us! Share every photo and video you take today.
+UPLOAD_OPENS=2027-09-18T12:00:00-04:00
+UPLOAD_CLOSES=2027-09-25T23:59:59-04:00
+TIMEZONE=America/New_York
+COLOR_BACKGROUND="#FBF8F1"
+COLOR_PRIMARY="#7D8F69"
+COLOR_TEXT="#3B3A36"
+FONT=serif
+# HEADER_PHOTO=https://example.com/us.jpg
+# SITE_URL=https://photos.example.com

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{COUPLE}} · QR table card</title>
+<link rel="stylesheet" href="/app.css">
+<!--WEDDING-->
+<style>
+  @page { size: 4in 6in; margin: 0; }
+  body { background: color-mix(in srgb, var(--text) 8%, var(--bg)); }
+  .controls { max-width: 560px; margin: 24px auto; padding: 0 16px; display: grid; gap: 12px; }
+  .controls h1 { font-size: 32px; }
+  .controls p { margin: 0; font-size: 14px; color: var(--muted); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .card {
+    width: 4in; height: 6in; margin: 0 auto 40px; background: var(--bg); color: var(--text);
+    box-shadow: 0 6px 30px rgba(0,0,0,.12);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0.38in 0.34in; position: relative;
+  }
+  .card::before { content: ""; position: absolute; inset: 0.16in; border: 1px solid var(--primary); opacity: .55; pointer-events: none; }
+  .card::after { content: ""; position: absolute; inset: 0.21in; border: 0.5px solid var(--primary); opacity: .35; pointer-events: none; }
+  .kicker { text-transform: uppercase; letter-spacing: .24em; font-size: 8.5pt; color: var(--muted); }
+  .names { font-family: var(--display); font-size: 32pt; line-height: 1.05; margin: 8pt 0 4pt; }
+  .date { font-family: var(--display); font-style: italic; font-size: 12.5pt; color: var(--muted); }
+  .rule { width: 0.5in; height: 1px; background: var(--primary); margin: 12pt auto; opacity: .7; }
+  .headline { font-family: var(--display); font-size: 17pt; line-height: 1.2; margin-bottom: 4pt; }
+  .qr { width: 1.95in; height: 1.95in; margin: 10pt auto 8pt; padding: 0.08in; background: #fff; border-radius: 6px; }
+  .qr svg { width: 100%; height: 100%; display: block; }
+  .steps { font-size: 8.5pt; color: var(--muted); line-height: 1.45; }
+  .url { font-size: 8pt; margin-top: 6pt; color: var(--primary); word-break: break-all; }
+  @media print {
+    body { background: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .controls { display: none; }
+    .card { margin: 0; box-shadow: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<section class="controls">
+  <h1>QR table card</h1>
+  <p>Prints at 4×6 inches. In the print dialog choose paper size <b>4×6 in</b> (or 10×15 cm), margins <b>None</b>, scale <b>100%</b>, and turn on <b>Background graphics</b>. Print a test page first and scan it with a couple of phones.</p>
+  <label for="url">Link in the QR code</label>
+  <input type="url" id="url">
+  <label for="headline">Headline</label>
+  <input type="text" id="headline" value="Share your photos &amp; videos with us">
+  <div class="row">
+    <button class="btn" type="button" onclick="window.print()">Print</button>
+    <a class="btn ghost" href="/admin">Back to admin</a>
+  </div>
+</section>
+
+<article class="card">
+  <div class="kicker">The wedding of</div>
+  <div class="names" id="names"></div>
+  <div class="date" id="date"></div>
+  <div class="rule"></div>
+  <div class="headline" id="headlineOut"></div>
+  <div class="qr" id="qr"></div>
+  <div class="steps">Open your camera · point it at the code · tap the link<br>No app or sign-up needed</div>
+  <div class="url" id="urlOut"></div>
+</article>
+
+<script type="module">
+import qrcode from "/vendor/qrcode.mjs";
+const W = window.WEDDING;
+const $ = (id) => document.getElementById(id);
+if (W.font === "modern") document.documentElement.classList.add("font-modern");
+$("names").textContent = W.coupleNames;
+$("date").textContent = [W.weddingDate, W.venue].filter(Boolean).join(" · ");
+$("url").value = W.siteUrl || location.origin + "/";
+
+function draw() {
+  const url = $("url").value.trim() || location.origin + "/";
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  $("qr").innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  $("urlOut").textContent = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  $("headlineOut").textContent = $("headline").value;
+}
+$("url").addEventListener("input", draw);
+$("headline").addEventListener("input", draw);
+draw();
+</script>
+</body>
+</html>

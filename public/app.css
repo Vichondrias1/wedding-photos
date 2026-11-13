@@ -24,6 +24,7 @@
   --bg: #fbf8f1;
   --primary: #7d8f69;
   --text: #3b3a36;
+  --accent: #b89a6e;
   --muted: color-mix(in srgb, var(--text) 60%, var(--bg));
   --line: color-mix(in srgb, var(--text) 14%, var(--bg));
   --card: color-mix(in srgb, #fff 70%, var(--bg));

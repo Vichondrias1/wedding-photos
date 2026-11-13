@@ -18,6 +18,7 @@ TIMEZONE=America/New_York
 COLOR_BACKGROUND="#FBF8F1"
 COLOR_PRIMARY="#7D8F69"
 COLOR_TEXT="#3B3A36"
+COLOR_ACCENT="#B89A6E"
 FONT=serif
 # HEADER_PHOTO=https://example.com/us.jpg
 # SITE_URL=https://photos.example.com

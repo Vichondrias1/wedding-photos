@@ -99,7 +99,7 @@ const OVERRIDES = {
   SITE_URL: "siteUrl",
   STORAGE_LIMIT_GB: "storageLimitGB",
 };
-const COLOR_OVERRIDES = { COLOR_BACKGROUND: "background", COLOR_PRIMARY: "primary", COLOR_TEXT: "text" };
+const COLOR_OVERRIDES = { COLOR_BACKGROUND: "background", COLOR_PRIMARY: "primary", COLOR_TEXT: "text", COLOR_ACCENT: "accent" };
 
 function config(env) {
   const cfg = { ...defaults, colors: { ...defaults.colors } };
@@ -169,7 +169,7 @@ async function page(env, url, file) {
   const c = cfg.colors;
   const inject =
     `<script>window.WEDDING=${JSON.stringify(pub).replace(/</g, "\\u003c")};</script>` +
-    `<style>:root{--bg:${c.background};--primary:${c.primary};--text:${c.text};}</style>`;
+    `<style>:root{--bg:${c.background};--primary:${c.primary};--text:${c.text};--accent:${c.accent};}</style>`;
   let html = await res.text();
   html = html.replace("<!--WEDDING-->", inject).replaceAll("{{COUPLE}}", escapeHtml(cfg.coupleNames));
   return new Response(html, {

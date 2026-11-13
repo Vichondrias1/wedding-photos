@@ -38,6 +38,7 @@ export default {
     background: "#FBF8F1", // ivory                      Override: COLOR_BACKGROUND
     primary: "#7D8F69", //    sage — buttons & accents    Override: COLOR_PRIMARY
     text: "#3B3A36", //       dark text                   Override: COLOR_TEXT
+    accent: "#B89A6E", //     thin lines & card border    Override: COLOR_ACCENT
   },
 
   // "serif" (elegant, Cormorant Garamond) or "modern" (clean sans-serif).

@@ -166,7 +166,7 @@ All your details live in **one file**: `src/config.js`. Open it in any text edit
 | `uploadOpens` | When guests can start uploading | `"2027-09-18T12:00:00-04:00"` |
 | `uploadCloses` | When uploads stop | `"2027-09-25T23:59:59-04:00"` |
 | `timezone` | Your time zone, for showing dates | `"America/New_York"`, `"Asia/Manila"`, `"Europe/London"` |
-| `colors` | Background, button/accent and text colours | ivory `#FBF8F1`, sage `#7D8F69` |
+| `colors` | Background, buttons, text, and an accent for thin lines & the QR card border | ivory `#FBF8F1`, sage `#7D8F69` |
 | `font` | `"serif"` (elegant) or `"modern"` | `"serif"` |
 | `headerPhoto` | Optional photo at the top (`""` for none) | `"https://…/us.jpg"` or `"/header.jpg"` |
 | `siteUrl` | Optional: the link printed on the QR card | `""` (uses the site's own address) |

@@ -28,6 +28,10 @@
   }
   .card::before { content: ""; position: absolute; inset: 0.16in; border: 1px solid var(--accent); opacity: .8; pointer-events: none; }
   .card::after { content: ""; position: absolute; inset: 0.21in; border: 0.5px solid var(--accent); opacity: .5; pointer-events: none; }
+  .logo { display: block; height: 0.85in; width: auto; max-width: 1.7in; margin: 0 auto 3pt; }
+  .card.two .logo { height: 0.78in; }
+  .card.has-logo .kicker { display: none; }
+  .card.has-logo .single .qr { width: 1.75in; height: 1.75in; }
   .kicker { text-transform: uppercase; letter-spacing: .24em; font-size: 8.5pt; color: var(--muted); }
   .names { font-family: var(--display); font-size: 32pt; line-height: 1.05; margin: 8pt 0 4pt; }
   .date { font-family: var(--display); font-style: italic; font-size: 12.5pt; color: var(--muted); }
@@ -86,6 +90,8 @@
     <div style="display:flex;align-items:flex-end"><label class="check"><input type="checkbox" id="wifiShow" checked> Print network name &amp; password</label></div>
   </div>
 
+  <label class="check" id="logoRow" hidden><input type="checkbox" id="logoShow" checked> Show monogram at the top</label>
+
   <div class="row">
     <button class="btn" type="button" onclick="window.print()">Print</button>
     <a class="btn ghost" href="/admin">Back to admin</a>
@@ -93,6 +99,7 @@
 </section>
 
 <article class="card" id="card">
+  <img class="logo" id="logo" alt="" hidden>
   <div class="kicker">The wedding of</div>
   <div class="names" id="names"></div>
   <div class="date" id="date"></div>
@@ -131,6 +138,7 @@ if (W.font === "modern") document.documentElement.classList.add("font-modern");
 $("names").textContent = W.coupleNames;
 $("date").textContent = [W.weddingDate, W.venue].filter(Boolean).join(" · ");
 $("url").value = W.siteUrl || location.origin + "/";
+if (W.logo) { $("logo").src = W.logo; $("logoRow").hidden = false; }
 $("wifiName").value = W.wifiName || "";
 $("wifiPass").value = W.wifiPassword || "";
 $("wifiSec").value = ["WPA", "WEP", "nopass"].includes(W.wifiSecurity) ? W.wifiSecurity : "WPA";
@@ -158,6 +166,9 @@ function draw() {
 
   $("headlineOut").textContent = $("headline").value;
   $("card").classList.toggle("two", two);
+  const logo = !!W.logo && $("logoShow").checked;
+  $("card").classList.toggle("has-logo", logo);
+  $("logo").hidden = !logo;
   $("pairSteps").hidden = !two;
 
   if (two) {
@@ -181,7 +192,7 @@ function draw() {
     $("urlOut").textContent = shortUrl;
   }
 }
-for (const id of ["url", "headline", "wifiName", "wifiPass", "wifiSec", "wifiShow"]) {
+for (const id of ["url", "headline", "wifiName", "wifiPass", "wifiSec", "wifiShow", "logoShow"]) {
   $(id).addEventListener("input", draw);
   $(id).addEventListener("change", draw);
 }

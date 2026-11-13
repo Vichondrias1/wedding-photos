@@ -262,6 +262,38 @@ await test("header photo upload is served publicly and shown on the guest page",
   eq((await req("/header-photo")).status, 404, "gone");
 });
 
+// ---------------------------------------------------------------- monogram / favicon
+await test("monogram, favicon and touch icon upload are admin-only, served and linked", async () => {
+  eq((await req("/favicon.ico")).status, 404, "no favicon yet");
+  eq((await req("/api/admin/brand?kind=logo", { method: "PUT", headers: { "Content-Type": "image/png" }, body: randomBytes(100) })).status, 401, "anonymous");
+  eq((await req("/api/admin/brand?kind=nope", { method: "PUT", headers: { "Content-Type": "image/png" }, body: randomBytes(100) }, cookie)).status, 400, "bad kind");
+  eq((await req("/api/admin/brand?kind=logo", { method: "PUT", headers: { "Content-Type": "image/svg+xml" }, body: randomBytes(100) }, cookie)).status, 415, "svg refused");
+  const files = { logo: ["/logo", "image/webp"], favicon: ["/favicon.ico", "image/x-icon"], apple: ["/apple-touch-icon.png", "image/png"] };
+  const bodies = {};
+  for (const [kind, [, type]] of Object.entries(files)) {
+    bodies[kind] = randomBytes(3000);
+    eq((await req("/api/admin/brand?kind=" + kind, { method: "PUT", headers: { "Content-Type": type }, body: bodies[kind] }, cookie)).status, 200, "put " + kind);
+  }
+  for (const [kind, [path, type]] of Object.entries(files)) {
+    const g = await req(path);
+    eq(g.status, 200, "get " + path);
+    eq(g.headers.get("content-type"), type, "type " + path);
+    eq(sha(Buffer.from(await g.arrayBuffer())), sha(bodies[kind]), "sha " + path);
+  }
+  for (const p of ["/", "/admin"]) {
+    const html = await (await req(p)).text();
+    ok(/"logo":"\/logo\?v=/.test(html), p + " has logo");
+    ok(html.includes('<link rel="icon" href="/favicon.ico?v='), p + " links favicon");
+    ok(html.includes('<link rel="apple-touch-icon" href="/apple-touch-icon.png?v='), p + " links touch icon");
+  }
+  const j = await (await req("/api/admin/files", {}, cookie)).json();
+  ok(!j.files.some((f) => f.key.startsWith("site/")), "not listed as uploads");
+  eq((await req("/api/admin/brand", { method: "DELETE" }, cookie)).status, 200, "delete");
+  for (const [path] of Object.values(files)) eq((await req(path)).status, 404, "gone " + path);
+  const html = await (await req("/")).text();
+  ok(html.includes('"logo":""') && !html.includes('rel="icon"'), "unlinked after delete");
+});
+
 // ---------------------------------------------------------------- delete
 await test("delete one file removes it and its thumbnail", async () => {
   eq((await req("/api/admin/file?key=" + encodeURIComponent(singleKey), { method: "DELETE" }, cookie)).status, 200, "delete");

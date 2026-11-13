@@ -176,6 +176,8 @@ All your details live in **one file**: `src/config.js`. Open it in any text edit
 
 **Header photo:** the easiest way is to leave it `""` and upload a photo later from the admin page (**Settings & clean-up → Header photo**). Or put an image file in the `public` folder (for example `public/header.jpg`) and set `headerPhoto: "/header.jpg"`.
 
+**Monogram & browser icon:** on the admin page open **Settings & clean-up → Monogram & browser icon** and upload your monogram or logo (a PNG with a transparent background looks best). It appears above your names on the guest page, the admin login and the QR card, and the site makes the browser-tab icon (`favicon.ico`) and phone home-screen icon from it automatically. Like the header photo, it's stored in your R2 bucket, not in GitHub.
+
 Keep the quote marks and commas exactly as they are. Save the file.
 
 ### Option A: private repo (simplest)

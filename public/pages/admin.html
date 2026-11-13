@@ -11,6 +11,8 @@
   main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px; }
   .login { max-width: 360px; margin: 12vh auto 0; text-align: center; }
   .login h1 { font-size: 40px; margin-bottom: 4px; }
+  .login-logo { display: block; width: 170px; height: auto; margin: -6vh auto 6px; }
+  .brand-preview { display: block; width: 120px; height: auto; margin: 4px 0 12px; }
   .login p { color: var(--muted); margin: 0 0 22px; }
   .login form { display: grid; gap: 12px; }
   .err { color: var(--danger); font-size: 14px; min-height: 20px; }
@@ -60,6 +62,7 @@
 <main>
   <!-- Login -->
   <section class="login" id="loginView" hidden>
+    <img id="loginLogo" class="login-logo" alt="" hidden>
     <h1 id="loginNames"></h1>
     <p>Admin</p>
     <form id="loginForm">
@@ -125,6 +128,16 @@
         </div>
       </div>
       <div class="panel">
+        <h2>Monogram &amp; browser icon</h2>
+        <p id="brandInfo">Shown above your names on the guest page, the login screen and the QR card, and used as the little icon in the browser tab and on phone home screens. A PNG with a transparent background looks best.</p>
+        <img id="brandPreview" class="brand-preview" alt="" hidden>
+        <input type="file" id="brandFile" accept="image/png,image/webp,image/jpeg" hidden>
+        <div class="actions">
+          <button class="btn small" id="brandBtn" type="button">Upload monogram</button>
+          <button class="btn small danger" id="brandDel" type="button">Remove</button>
+        </div>
+      </div>
+      <div class="panel">
         <h2>Delete everything</h2>
         <p>Deletes every uploaded photo, video and thumbnail. Use this to clear out test uploads before the wedding, or after you've downloaded and backed up everything. This can't be undone.</p>
         <button class="btn small danger" id="deleteAllBtn" type="button">Delete all uploads…</button>
@@ -163,6 +176,7 @@ const W = window.WEDDING;
 const $ = (id) => document.getElementById(id);
 if (W.font === "modern") document.documentElement.classList.add("font-modern");
 $("loginNames").textContent = W.coupleNames;
+if (W.logo) { $("loginLogo").src = W.logo; $("loginLogo").hidden = false; }
 $("title").textContent = W.coupleNames;
 
 let files = [];
@@ -242,6 +256,9 @@ async function load() {
   $("headerInfo").textContent = W.headerPhoto && !W.headerFromBucket
     ? "A header photo is set in your config (HEADER_PHOTO). Clear that to use an uploaded one instead."
     : "Shown at the top of the guest page. Currently: " + (W.headerPhoto ? "set" : "none") + ".";
+  $("brandPreview").hidden = !W.logo;
+  if (W.logo) $("brandPreview").src = W.logo;
+  $("brandDel").hidden = !W.logo;
   renderGrid();
 }
 
@@ -480,6 +497,75 @@ $("headerFile").onchange = async (e) => {
 $("headerDel").onclick = async () => {
   if (!confirm("Remove the uploaded header photo?")) return;
   try { await api("/api/admin/header", { method: "DELETE" }); W.headerPhoto = ""; toast("Header photo removed."); load(); }
+  catch (err) { toast(err.message); }
+};
+
+// ---------- monogram / favicon ----------
+// The browser makes all three files, so the Worker never has to resize images.
+function square(img, size, bg, pad) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, size, size); }
+  g.imageSmoothingQuality = "high";
+  const k = Math.min((size - 2 * pad) / img.width, (size - 2 * pad) / img.height);
+  const w = img.width * k, h = img.height * k;
+  g.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+  return c;
+}
+const toBlob = (c, type, q) => new Promise((ok) => c.toBlob(ok, type, q));
+async function makeIco(img, sizes) {
+  const pngs = [];
+  for (const s of sizes) pngs.push(new Uint8Array(await (await toBlob(square(img, s, null, 0), "image/png")).arrayBuffer()));
+  const head = 6 + 16 * sizes.length;
+  const buf = new Uint8Array(head + pngs.reduce((n, p) => n + p.length, 0));
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(2, 1, true);
+  dv.setUint16(4, sizes.length, true);
+  let off = head;
+  sizes.forEach((s, i) => {
+    const e = 6 + 16 * i;
+    buf[e] = buf[e + 1] = s >= 256 ? 0 : s;
+    dv.setUint16(e + 4, 1, true);
+    dv.setUint16(e + 6, 32, true);
+    dv.setUint32(e + 8, pngs[i].length, true);
+    dv.setUint32(e + 12, off, true);
+    buf.set(pngs[i], off);
+    off += pngs[i].length;
+  });
+  return new Blob([buf], { type: "image/x-icon" });
+}
+$("brandBtn").onclick = () => $("brandFile").click();
+$("brandFile").onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    const img = await createImageBitmap(file);
+    const big = Math.max(img.width, img.height);
+    let logo = file;
+    if (big > 900 || file.size > 1.5 * 1024 * 1024) {
+      const c = document.createElement("canvas");
+      const k = Math.min(1, 900 / big);
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, c.width, c.height);
+      logo = await toBlob(c, "image/webp", 0.9); // Safari falls back to PNG
+    }
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#ffffff";
+    const apple = await toBlob(square(img, 180, bg, 10), "image/png");
+    const ico = await makeIco(img, [16, 32, 48, 64]);
+    const put = (kind, blob) => api("/api/admin/brand?kind=" + kind, { method: "PUT", headers: { "Content-Type": blob.type }, body: blob });
+    await put("logo", logo);
+    await put("favicon", ico);
+    await put("apple", apple);
+    W.logo = "/logo?v=" + Date.now();
+    toast("Monogram updated. Reload the guest page to see it.");
+    load();
+  } catch (err) { toast(err.message || "Couldn't read that image."); }
+};
+$("brandDel").onclick = async () => {
+  if (!confirm("Remove the monogram and browser icon?")) return;
+  try { await api("/api/admin/brand", { method: "DELETE" }); W.logo = ""; toast("Monogram removed."); load(); }
   catch (err) { toast(err.message); }
 };
 

@@ -15,6 +15,13 @@ const HEADER_MAX = 15 * MiB;
 const SESSION_DAYS = 30;
 const COOKIE = "wp_admin";
 const HEADER_KEY = "site/header";
+// Monogram / logo and browser icons, uploaded from the admin page.
+const BRAND = {
+  logo: { key: "site/logo", path: "/logo", types: ["image/png", "image/webp", "image/jpeg"] },
+  favicon: { key: "site/favicon.ico", path: "/favicon.ico", types: ["image/x-icon", "image/vnd.microsoft.icon", "image/png"] },
+  apple: { key: "site/apple-touch-icon.png", path: "/apple-touch-icon.png", types: ["image/png"] },
+};
+const BRAND_MAX = 5 * MiB;
 
 const KEY_RE = /^uploads\/([a-z0-9]{6,12}-[a-z0-9]{10})(\.[a-z0-9]{1,8})?$/;
 
@@ -42,7 +49,8 @@ async function route(request, env) {
       if (!(await isAdmin(request, env))) return Response.redirect(new URL("/admin?next=card", url), 302);
       return page(env, url, "card.html");
     }
-    if (path === "/header-photo") return headerPhoto(env);
+    if (path === "/header-photo") return siteFile(env, HEADER_KEY);
+    for (const b of Object.values(BRAND)) if (path === b.path) return siteFile(env, b.key);
   }
   if (path.startsWith("/pages")) return new Response("Not found", { status: 404 });
 
@@ -73,6 +81,11 @@ async function route(request, env) {
     if (path === "/api/admin/header" && method === "PUT") return putHeader(request, env);
     if (path === "/api/admin/header" && method === "DELETE") {
       await env.BUCKET.delete(HEADER_KEY);
+      return json({ ok: true });
+    }
+    if (path === "/api/admin/brand" && method === "PUT") return putBrand(request, env, url);
+    if (path === "/api/admin/brand" && method === "DELETE") {
+      await env.BUCKET.delete(Object.values(BRAND).map((b) => b.key));
       return json({ ok: true });
     }
   }
@@ -150,11 +163,12 @@ async function page(env, url, file) {
   if (!res.ok) return new Response("Page missing: " + file, { status: 500 });
   const cfg = config(env);
 
-  let header = cfg.headerPhoto;
-  if (!header) {
-    const head = await env.BUCKET.head(HEADER_KEY);
-    if (head) header = "/header-photo?v=" + encodeURIComponent(head.etag);
-  }
+  // One list call tells us which site images (header, logo, icons) exist.
+  const site = {};
+  for (const o of (await env.BUCKET.list({ prefix: "site/" })).objects) site[o.key] = encodeURIComponent(o.etag);
+  const ver = (key, path) => (site[key] ? path + "?v=" + site[key] : "");
+  const header = cfg.headerPhoto || ver(HEADER_KEY, "/header-photo");
+  const logo = ver(BRAND.logo.key, BRAND.logo.path);
   const pub = {
     coupleNames: cfg.coupleNames,
     weddingDate: cfg.weddingDate,
@@ -168,6 +182,7 @@ async function page(env, url, file) {
     headerFromBucket: !cfg.headerPhoto && !!header,
     siteUrl: cfg.siteUrl,
     storageLimitGB: cfg.storageLimitGB,
+    logo,
   };
   // Wi-Fi details only go to the QR card page, which is admin-only.
   if (file === "card.html") {
@@ -178,7 +193,9 @@ async function page(env, url, file) {
   const c = cfg.colors;
   const inject =
     `<script>window.WEDDING=${JSON.stringify(pub).replace(/</g, "\\u003c")};</script>` +
-    `<style>:root{--bg:${c.background};--primary:${c.primary};--text:${c.text};--accent:${c.accent};}</style>`;
+    `<style>:root{--bg:${c.background};--primary:${c.primary};--text:${c.text};--accent:${c.accent};}</style>` +
+    (site[BRAND.favicon.key] ? `<link rel="icon" href="${ver(BRAND.favicon.key, BRAND.favicon.path)}" sizes="any">` : "") +
+    (site[BRAND.apple.key] ? `<link rel="apple-touch-icon" href="${ver(BRAND.apple.key, BRAND.apple.path)}">` : "");
   let html = await res.text();
   html = html.replace("<!--WEDDING-->", inject).replaceAll("{{COUPLE}}", escapeHtml(cfg.coupleNames));
   return new Response(html, {
@@ -191,13 +208,14 @@ async function page(env, url, file) {
   });
 }
 
-async function headerPhoto(env) {
-  const obj = await env.BUCKET.get(HEADER_KEY);
+async function siteFile(env, key) {
+  const obj = await env.BUCKET.get(key);
   if (!obj) return new Response("Not found", { status: 404 });
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   headers.set("Cache-Control", "public, max-age=3600");
   headers.set("ETag", obj.httpEtag);
+  headers.set("X-Content-Type-Options", "nosniff");
   return new Response(obj.body, { headers });
 }
 
@@ -552,6 +570,18 @@ async function putHeader(request, env) {
   if (len > HEADER_MAX) return json({ error: "Header photo must be under 15 MB." }, 413);
   if (!type.startsWith("image/")) return json({ error: "Please choose an image." }, 415);
   await env.BUCKET.put(HEADER_KEY, request.body, { httpMetadata: { contentType: type } });
+  return json({ ok: true });
+}
+
+async function putBrand(request, env, url) {
+  const b = BRAND[url.searchParams.get("kind")];
+  if (!b) return json({ error: "Unknown kind." }, 400);
+  const len = contentLength(request);
+  const type = String(request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+  if (!len) return json({ error: "Empty image." }, 411);
+  if (len > BRAND_MAX) return json({ error: "Image must be under 5 MB." }, 413);
+  if (!b.types.includes(type)) return json({ error: "Please choose a PNG, WebP or JPEG image." }, 415);
+  await env.BUCKET.put(b.key, request.body, { httpMetadata: { contentType: type } });
   return json({ ok: true });
 }
 
